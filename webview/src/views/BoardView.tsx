@@ -36,8 +36,8 @@ export function BoardView() {
   }, [subscribe, setColumns, setLoading, setCurrentFilePath]);
 
   // 初期化時にデータを要求（ハンドラー登録後）
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-    useEffect(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sendMessageはブリッジ再生成で参照が変わるため、初回ロードだけを行う目的で依存から除外している
+  useEffect(() => {
     sendMessage("board:load");
   }, []); // sendMessageを依存配列から除外して1回のみ実行
 

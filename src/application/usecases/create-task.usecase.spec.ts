@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CreateTaskInput } from "@application/dto/create-task.input";
 import type { PatchServicePort } from "@application/ports/patch-service";
 import type { TaskIndexWriter } from "@domain/repositories/task-index-writer";
+import { TaskFactory } from "@domain/services/task-factory";
 import { CreateTaskUseCase } from "./create-task.usecase";
 
 describe("CreateTaskUseCase", () => {
@@ -23,6 +24,7 @@ describe("CreateTaskUseCase", () => {
     useCase = new CreateTaskUseCase({
       patchService: mockPatchService,
       indexWriter: mockIndexWriter,
+      taskFactory: new TaskFactory(),
     });
   });
 

@@ -49,20 +49,14 @@ defaults:
     expect(second.source.line).toBe(6);
   });
 
-  it("collects issues when task creation fails", () => {
+  it("auto-assigns an id when the attribute is missing", () => {
     const markdown = "- [ ] Missing id {status: todo}";
 
     const result = parse(markdown);
 
-    expect(result.tasks).toHaveLength(0);
-    expect(result.issues).toHaveLength(1);
-
-    const [issue] = result.issues;
-    expect(issue.line).toBe(0);
-    expect(issue.message).toContain("Failed to create Task");
-    expect(issue.detail).toMatchObject({
-      reasons: expect.arrayContaining(["TaskId"]),
-    });
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0]?.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(result.issues).toHaveLength(0);
   });
 
   it("falls back to checkbox status when inline status is absent", () => {

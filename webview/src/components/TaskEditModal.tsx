@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { TaskCardData } from "../types/board";
 
 interface TaskEditModalProps {
@@ -28,6 +28,12 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
       setProject(task.project || "");
     }
   }, [task]);
+
+  useEffect(() => {
+    if (isOpen && task) {
+      resetForm();
+    }
+  }, [isOpen, task, resetForm]);
 
   const handleSave = () => {
     if (!task) return;

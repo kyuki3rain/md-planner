@@ -2,18 +2,22 @@ import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 import { ulid } from "ulid";
 
+import { CreateTaskInputSchema } from "@application/dto/create-task.input";
 import type { CreateTaskInput } from "@application/dto/create-task.input";
 import type { CreateTaskOutput } from "@application/dto/create-task.output";
 import type { PatchServiceError, PatchServicePort } from "@application/ports/patch-service";
 import type { Task } from "@domain/entities/task";
+import type { TaskAttributesInput } from "@domain/entities/task-attributes";
 import type { TaskIndexWriter } from "@domain/repositories/task-index-writer";
 import type { TaskId } from "@domain/value-objects/task-id";
+import { TaskFactory } from "@domain/services/task-factory";
 
 export type CreateTaskError = PatchServiceError | { type: "VALIDATION_ERROR"; message: string };
 
 type CreateTaskDependencies = {
   readonly patchService: PatchServicePort;
   readonly indexWriter: TaskIndexWriter;
+  readonly taskFactory: TaskFactory;
 };
 
 /**
@@ -28,31 +32,40 @@ export class CreateTaskUseCase {
   constructor(private readonly dependencies: CreateTaskDependencies) {}
 
   async execute(input: CreateTaskInput): Promise<Result<CreateTaskOutput, CreateTaskError>> {
+    const parsed = CreateTaskInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return err({ type: "VALIDATION_ERROR", message: parsed.error.message });
+    }
+
+    const validated = parsed.data;
+
     // 新しいタスクIDを生成
     const taskId = this.generateTaskId();
 
-    // タスクエンティティを構築
-    const task: Task = {
+    const taskResult = this.dependencies.taskFactory.create({
       id: taskId,
-      title: input.title,
+      title: validated.title,
       status: "todo",
-      attributes: input.attributes ?? {
-        tags: undefined,
-        depends: undefined,
-      },
+      attributes: toTaskAttributesInput(validated.attributes),
       source: {
-        filePath: input.filePath,
-        line: input.insertLine ?? -1, // -1は末尾を意味する（実際の行番号はパッチ適用時に確定）
+        filePath: validated.filePath,
+        line: validated.insertLine ?? 0,
         column: 0,
       },
-    };
+    });
+
+    if (taskResult.isErr()) {
+      return err({ type: "VALIDATION_ERROR", message: taskResult.error.message });
+    }
+
+    const task = taskResult.value;
 
     // Markdownファイルへの挿入
     const patchResult = await this.dependencies.patchService.applyPatch({
       type: "insert",
-      filePath: input.filePath,
+      filePath: validated.filePath,
       task,
-      insertLine: input.insertLine,
+      insertLine: validated.insertLine,
     });
 
     if (patchResult.isErr()) {
@@ -71,4 +84,30 @@ export class CreateTaskUseCase {
     // 短縮版: 最初の10文字を使用
     return `T-${id.substring(0, 6)}` as TaskId;
   }
+}
+
+function toTaskAttributesInput(attributes: CreateTaskInput["attributes"]): TaskAttributesInput | undefined {
+  if (!attributes) {
+    return undefined;
+  }
+
+  const result: TaskAttributesInput = {};
+
+  if (typeof attributes.project === "string") {
+    result.project = attributes.project;
+  }
+  if (typeof attributes.assignee === "string") {
+    result.assignee = attributes.assignee;
+  }
+  if (typeof attributes.due === "string") {
+    result.due = attributes.due;
+  }
+  if (Array.isArray(attributes.tags)) {
+    result.tags = attributes.tags;
+  }
+  if (Array.isArray(attributes.depends)) {
+    result.depends = attributes.depends;
+  }
+
+  return Object.keys(result).length > 0 ? result : {};
 }

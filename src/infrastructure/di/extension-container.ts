@@ -23,6 +23,7 @@ export class ExtensionContainer {
   private _createTaskUseCase?: CreateTaskUseCase;
   private _updateTaskUseCase?: UpdateTaskUseCase;
   private _deleteTaskUseCase?: DeleteTaskUseCase;
+  private readonly taskFactory = new TaskFactory();
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -32,7 +33,7 @@ export class ExtensionContainer {
   get taskIndexService(): TaskIndexService {
     if (!this._taskIndexService) {
       const index = this.getTaskIndex();
-      const parser = new MarkdownTaskParser(new TaskFactory());
+      const parser = new MarkdownTaskParser(this.taskFactory);
       const buildIndexUseCase = new BuildTaskIndexUseCase({ parser, writer: index });
       const scanner = new FileSystemTaskScanner();
 
@@ -57,6 +58,7 @@ export class ExtensionContainer {
       this._createTaskUseCase = new CreateTaskUseCase({
         patchService,
         indexWriter: index,
+        taskFactory: this.taskFactory,
       });
     }
     return this._createTaskUseCase;
@@ -75,6 +77,7 @@ export class ExtensionContainer {
         patchService,
         repository: index,
         indexWriter: index,
+        taskFactory: this.taskFactory,
       });
     }
     return this._updateTaskUseCase;

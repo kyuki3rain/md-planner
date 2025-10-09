@@ -7,6 +7,7 @@ import type { Task } from "@domain/entities/task";
 import type { TaskIndexWriter } from "@domain/repositories/task-index-writer";
 import type { TaskRepository } from "@domain/repositories/task-repository";
 import type { TaskId } from "@domain/value-objects/task-id";
+import { TaskFactory } from "@domain/services/task-factory";
 import { UpdateTaskUseCase } from "./update-task.usecase";
 
 describe("UpdateTaskUseCase", () => {
@@ -15,20 +16,19 @@ describe("UpdateTaskUseCase", () => {
   let mockRepository: TaskRepository;
   let mockIndexWriter: TaskIndexWriter;
 
-  const existingTask: Task = {
-    id: "T-ABC123" as TaskId,
-    title: "Existing task",
-    status: "todo",
-    attributes: {
-      tags: undefined,
-      depends: undefined,
-    },
-    source: {
-      filePath: "/path/to/file.md",
-      line: 10,
-      column: 0,
-    },
-  };
+  function makeExistingTask(): Task {
+    return {
+      id: "T-ABC123" as TaskId,
+      title: "Existing task",
+      status: "todo",
+      attributes: {},
+      source: {
+        filePath: "/path/to/file.md",
+        line: 10,
+        column: 0,
+      },
+    };
+  }
 
   beforeEach(() => {
     mockPatchService = {
@@ -48,6 +48,7 @@ describe("UpdateTaskUseCase", () => {
       patchService: mockPatchService,
       repository: mockRepository,
       indexWriter: mockIndexWriter,
+      taskFactory: new TaskFactory(),
     });
   });
 
@@ -58,7 +59,7 @@ describe("UpdateTaskUseCase", () => {
         title: "Updated title",
       };
 
-      vi.mocked(mockRepository.findById).mockResolvedValue(existingTask);
+      vi.mocked(mockRepository.findById).mockResolvedValue(makeExistingTask());
       vi.mocked(mockPatchService.applyPatch).mockResolvedValue(ok(undefined));
       vi.mocked(mockIndexWriter.upsert).mockResolvedValue(undefined);
 
@@ -84,7 +85,7 @@ describe("UpdateTaskUseCase", () => {
         status: "doing",
       };
 
-      vi.mocked(mockRepository.findById).mockResolvedValue(existingTask);
+      vi.mocked(mockRepository.findById).mockResolvedValue(makeExistingTask());
       vi.mocked(mockPatchService.applyPatch).mockResolvedValue(ok(undefined));
       vi.mocked(mockIndexWriter.upsert).mockResolvedValue(undefined);
 
@@ -119,7 +120,7 @@ describe("UpdateTaskUseCase", () => {
         title: "New title",
       };
 
-      vi.mocked(mockRepository.findById).mockResolvedValue(existingTask);
+      vi.mocked(mockRepository.findById).mockResolvedValue(makeExistingTask());
       vi.mocked(mockPatchService.applyPatch).mockResolvedValue(
         err({ type: "WRITE_ERROR", message: "Failed to write" }),
       );
@@ -145,7 +146,7 @@ describe("UpdateTaskUseCase", () => {
         },
       };
 
-      vi.mocked(mockRepository.findById).mockResolvedValue(existingTask);
+      vi.mocked(mockRepository.findById).mockResolvedValue(makeExistingTask());
       vi.mocked(mockPatchService.applyPatch).mockResolvedValue(ok(undefined));
       vi.mocked(mockIndexWriter.upsert).mockResolvedValue(undefined);
 

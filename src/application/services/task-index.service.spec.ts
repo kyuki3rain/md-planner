@@ -61,28 +61,51 @@ describe("TaskIndexService", () => {
     expect(service.getIssues()).toHaveLength(0);
   });
 
-  it("collects issues from the build use case", async () => {
+  it("collects issues from the build use case without discarding tasks", async () => {
     const { service } = createService([
       {
         path: "tasks/a.md",
-        content: "- [ ] Missing id",
+        content: [
+          "- [ ] Valid task {id: T-AAA11, status: todo}",
+          "- [ ] Broken task {id: T-INVALID, status: ???}",
+        ].join("\n"),
       },
     ]);
 
     await service.initialize([{ path: "/workspace" }]);
 
-    expect(service.getIssues()).toHaveLength(1);
-    expect(service.getIssues()[0]?.filePath).toBe("tasks/a.md");
+    const tasks = await service.listAll();
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.id).toBe("T-AAA11");
+
+    const issues = service.getIssues();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.filePath).toBe("tasks/a.md");
+    expect(issues[0]?.message).toContain("Failed to create Task");
   });
 
-  it("prevents double initialization", async () => {
-    const { service } = createService([]);
+  it("allows double initialization and keeps tasks available", async () => {
+    const { service } = createService([
+      {
+        path: "tasks/a.md",
+        content: "- [ ] First {id: T-AAA11}",
+      },
+    ]);
 
     await service.initialize([{ path: "/workspace" }]);
 
-    await expect(service.initialize([{ path: "/workspace" }])).rejects.toThrow(
-      /already initialized/i,
-    );
+    // 2回目は別のファイル構成を読み込んでもエラーにならないことを確認
+    await expect(
+      service.initialize([
+        {
+          path: "/workspace",
+        },
+      ]),
+    ).resolves.toBeUndefined();
+
+    const tasks = await service.listAll();
+    expect(tasks.map((task) => task.id)).toEqual(["T-AAA11"]);
+    expect(service.getIssues()).toHaveLength(0);
   });
 
   it("throws when listAll is called before initialization", async () => {

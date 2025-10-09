@@ -35,7 +35,7 @@ describe("FileSystemTaskScanner", () => {
       });
 
       const paths = files.map((file) => file.filePath);
-      expect(paths).toEqual(["work/todo.md"]);
+      expect(paths).toEqual([join(root, "work", "todo.md")]);
       expect(files[0]?.content).toContain("Task");
     });
 
@@ -50,7 +50,9 @@ describe("FileSystemTaskScanner", () => {
         exclude: [],
       });
 
-      expect(files.map((file) => file.filePath).sort()).toEqual(["a.md", "b/b.md"]);
+      expect(files.map((file) => file.filePath).sort()).toEqual(
+        [join(rootA, "a.md"), join(rootB, "b", "b.md")].sort(),
+      );
     });
   });
 });

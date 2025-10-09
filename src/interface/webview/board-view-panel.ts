@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
+import type { TaskAttributesInput } from "@domain/entities/task-attributes";
 import type { ExtensionContainer } from "@infrastructure/di/extension-container";
 import { BaseWebviewProvider } from "./base-webview-provider";
 
@@ -254,6 +255,11 @@ export class BoardViewPanel extends BaseWebviewProvider {
       title?: string;
       filePath?: string;
       attributes?: Record<string, unknown>;
+      assignee?: unknown;
+      dueDate?: unknown;
+      tags?: unknown;
+      project?: unknown;
+      depends?: unknown;
     };
 
     if (!data.title || !data.filePath) {
@@ -262,9 +268,21 @@ export class BoardViewPanel extends BaseWebviewProvider {
     }
 
     try {
+      const attributesFromFields = this.extractAttributes({
+        assignee: data.assignee,
+        dueDate: data.dueDate,
+        tags: data.tags,
+        project: data.project,
+        depends: data.depends,
+      });
+
+      const attributesFromPayload = this.normalizeAttributesInput(data.attributes);
+      const attributes = this.mergeAttributes(attributesFromPayload, attributesFromFields);
+
       const result = await this.container.createTaskUseCase.execute({
         title: data.title,
         filePath: data.filePath,
+        ...(attributes ? { attributes } : {}),
       });
 
       if (result.isOk()) {
@@ -295,7 +313,12 @@ export class BoardViewPanel extends BaseWebviewProvider {
       updates?: {
         title?: string;
         status?: "todo" | "doing" | "blocked" | "done" | "archived";
+        assignee?: unknown;
+        dueDate?: unknown;
+        tags?: unknown;
+        project?: unknown;
         attributes?: Record<string, unknown>;
+        depends?: unknown;
       };
     };
 
@@ -309,6 +332,7 @@ export class BoardViewPanel extends BaseWebviewProvider {
         id: import("@domain/value-objects/task-id").TaskId;
         title?: string;
         status?: "todo" | "doing" | "blocked" | "done" | "archived";
+        attributes?: TaskAttributesInput;
       } = {
         id: data.id as import("@domain/value-objects/task-id").TaskId,
       };
@@ -318,6 +342,20 @@ export class BoardViewPanel extends BaseWebviewProvider {
       }
       if (data.updates.status) {
         updateInput.status = data.updates.status;
+      }
+
+      const attributeUpdatesFromFields = this.extractAttributes({
+        assignee: data.updates.assignee,
+        dueDate: data.updates.dueDate,
+        tags: data.updates.tags,
+        project: data.updates.project,
+        depends: data.updates.depends,
+      });
+      const attributeUpdatesFromPayload = this.normalizeAttributesInput(data.updates.attributes);
+      const mergedAttributes = this.mergeAttributes(attributeUpdatesFromPayload, attributeUpdatesFromFields);
+
+      if (mergedAttributes) {
+        updateInput.attributes = mergedAttributes;
       }
 
       const result = await this.container.updateTaskUseCase.execute(updateInput);
@@ -383,5 +421,95 @@ export class BoardViewPanel extends BaseWebviewProvider {
    */
   public async notifyIndexUpdate(): Promise<void> {
     await this.loadTasksFromFile();
+  }
+
+  private normalizeAttributesInput(value: unknown): TaskAttributesInput | undefined {
+    if (!value || typeof value !== "object") {
+      return undefined;
+    }
+
+    const record = value as Record<string, unknown>;
+    return this.extractAttributes({
+      assignee: record.assignee,
+      dueDate: record.due ?? record.dueDate,
+      tags: record.tags,
+      project: record.project,
+      depends: record.depends,
+    });
+  }
+
+  private extractAttributes(input: {
+    assignee?: unknown;
+    dueDate?: unknown;
+    tags?: unknown;
+    project?: unknown;
+    depends?: unknown;
+  }): TaskAttributesInput | undefined {
+    const attributes: TaskAttributesInput = {};
+    let hasAttribute = false;
+
+    if (typeof input.assignee === "string") {
+      const trimmed = input.assignee.trim();
+      if (trimmed.length > 0) {
+        attributes.assignee = trimmed;
+        hasAttribute = true;
+      }
+    }
+
+    if (typeof input.dueDate === "string") {
+      const trimmed = input.dueDate.trim();
+      if (trimmed.length > 0) {
+        attributes.due = trimmed;
+        hasAttribute = true;
+      }
+    }
+
+    if (Array.isArray(input.tags)) {
+      const normalized = input.tags
+        .filter((tag): tag is string => typeof tag === "string")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+      if (normalized.length > 0) {
+        attributes.tags = normalized;
+        hasAttribute = true;
+      }
+    }
+
+    if (typeof input.project === "string") {
+      const trimmed = input.project.trim();
+      if (trimmed.length > 0) {
+        attributes.project = trimmed;
+        hasAttribute = true;
+      }
+    }
+
+    if (Array.isArray(input.depends)) {
+      const normalized = input.depends
+        .filter((dep): dep is string => typeof dep === "string")
+        .map((dep) => dep.trim())
+        .filter((dep) => dep.length > 0);
+      if (normalized.length > 0) {
+        attributes.depends = normalized;
+        hasAttribute = true;
+      }
+    }
+
+    return hasAttribute ? attributes : undefined;
+  }
+
+  private mergeAttributes(
+    base?: TaskAttributesInput,
+    extra?: TaskAttributesInput,
+  ): TaskAttributesInput | undefined {
+    if (!base && !extra) {
+      return undefined;
+    }
+
+    const merged = {
+      ...(base ?? {}),
+      ...(extra ?? {}),
+    } satisfies TaskAttributesInput;
+
+    return Object.keys(merged).length > 0 ? merged : undefined;
   }
 }

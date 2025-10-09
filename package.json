@@ -9,14 +9,20 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:md-planner.openBoardForCurrentFile"
+  ],
   "main": "./dist/extension.js",
+  "icon": "resources/icon-extension.svg",
   "contributes": {
     "commands": [
       {
         "command": "md-planner.openBoardForCurrentFile",
         "title": "MD Planner: Open Board View",
-        "icon": "$(kanban)",
+        "icon": {
+          "light": "resources/icon-command-light.svg",
+          "dark": "resources/icon-command-dark.svg"
+        },
         "enablement": "resourceLangId == markdown"
       }
     ],

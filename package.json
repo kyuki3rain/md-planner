@@ -1,0 +1,93 @@
+{
+  "name": "md-planner",
+  "displayName": "md-planner",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "md-planner.openBoardForCurrentFile",
+        "title": "MD Planner: Open Board View",
+        "icon": "$(kanban)",
+        "enablement": "resourceLangId == markdown"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == markdown",
+          "command": "md-planner.openBoardForCurrentFile",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "when": "resourceLangId == markdown",
+          "command": "md-planner.openBoardForCurrentFile",
+          "group": "md-planner"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceLangId == markdown",
+          "command": "md-planner.openBoardForCurrentFile",
+          "group": "md-planner"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run typecheck && pnpm run lint && node esbuild.js && pnpm run build:webview",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "watch:webview": "cd webview && vite build --watch",
+    "build:webview": "cd webview && vite build",
+    "package": "pnpm run typecheck && pnpm run lint && node esbuild.js --production && pnpm run build:webview",
+    "vsce:package": "vsce package --no-dependencies",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vscode-test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/node": "22.x",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@types/vscode": "^1.104.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.2",
+    "esbuild": "^0.25.10",
+    "npm-run-all": "^4.1.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vitest": "^1.6.0",
+    "zustand": "^5.0.8"
+  },
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad",
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "neverthrow": "^8.2.0",
+    "ulid": "^3.0.1",
+    "zod": "^4.1.12"
+  }
+}

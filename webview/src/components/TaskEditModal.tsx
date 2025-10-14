@@ -83,6 +83,12 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
         zIndex: 1000,
       }}
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          onClose();
+        }
+      }}
+      role="presentation"
     >
       <div
         style={{
@@ -96,6 +102,10 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           overflow: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        // biome-ignore lint/a11y/useSemanticElements: VS Code Webview compatibility - <dialog> element may not be supported in all versions
+        role="dialog"
+        aria-modal="true"
       >
         <h2
           style={{
@@ -112,6 +122,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* タイトル */}
           <div>
             <label
+              htmlFor="task-title"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -123,6 +134,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               タイトル *
             </label>
             <input
+              id="task-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -141,6 +153,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* ステータス */}
           <div>
             <label
+              htmlFor="task-status"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -152,6 +165,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               ステータス
             </label>
             <select
+              id="task-status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               style={{
@@ -175,6 +189,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* 担当者 */}
           <div>
             <label
+              htmlFor="task-assignee"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -186,6 +201,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               担当者
             </label>
             <input
+              id="task-assignee"
               type="text"
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
@@ -205,6 +221,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* 期日 */}
           <div>
             <label
+              htmlFor="task-due-date"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -216,6 +233,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               期日
             </label>
             <input
+              id="task-due-date"
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
@@ -234,6 +252,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* プロジェクト */}
           <div>
             <label
+              htmlFor="task-project"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -245,6 +264,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               プロジェクト
             </label>
             <input
+              id="task-project"
               type="text"
               value={project}
               onChange={(e) => setProject(e.target.value)}
@@ -264,6 +284,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* タグ */}
           <div>
             <label
+              htmlFor="task-tags"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -275,6 +296,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               タグ (カンマ区切り)
             </label>
             <input
+              id="task-tags"
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -294,6 +316,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
           {/* ファイル情報 (読み取り専用) */}
           <div>
             <label
+              htmlFor="task-file-info"
               style={{
                 display: "block",
                 marginBottom: "4px",
@@ -305,6 +328,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
               ファイル
             </label>
             <div
+              id="task-file-info"
               style={{
                 padding: "8px",
                 backgroundColor: "var(--vscode-editor-background)",

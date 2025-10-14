@@ -6,11 +6,10 @@ import { CreateTaskInputSchema } from "@application/dto/create-task.input";
 import type { CreateTaskInput } from "@application/dto/create-task.input";
 import type { CreateTaskOutput } from "@application/dto/create-task.output";
 import type { PatchServiceError, PatchServicePort } from "@application/ports/patch-service";
-import type { Task } from "@domain/entities/task";
 import type { TaskAttributesInput } from "@domain/entities/task-attributes";
 import type { TaskIndexWriter } from "@domain/repositories/task-index-writer";
 import type { TaskId } from "@domain/value-objects/task-id";
-import { TaskFactory } from "@domain/services/task-factory";
+import type { TaskFactory } from "@domain/services/task-factory";
 
 export type CreateTaskError = PatchServiceError | { type: "VALIDATION_ERROR"; message: string };
 
@@ -86,28 +85,20 @@ export class CreateTaskUseCase {
   }
 }
 
-function toTaskAttributesInput(attributes: CreateTaskInput["attributes"]): TaskAttributesInput | undefined {
+function toTaskAttributesInput(
+  attributes: CreateTaskInput["attributes"],
+): TaskAttributesInput | undefined {
   if (!attributes) {
     return undefined;
   }
 
-  const result: TaskAttributesInput = {};
+  const normalized: TaskAttributesInput = {
+    ...(typeof attributes.project === "string" ? { project: attributes.project } : {}),
+    ...(typeof attributes.assignee === "string" ? { assignee: attributes.assignee } : {}),
+    ...(typeof attributes.due === "string" ? { due: attributes.due } : {}),
+    ...(Array.isArray(attributes.tags) ? { tags: [...attributes.tags] } : {}),
+    ...(Array.isArray(attributes.depends) ? { depends: [...attributes.depends] } : {}),
+  };
 
-  if (typeof attributes.project === "string") {
-    result.project = attributes.project;
-  }
-  if (typeof attributes.assignee === "string") {
-    result.assignee = attributes.assignee;
-  }
-  if (typeof attributes.due === "string") {
-    result.due = attributes.due;
-  }
-  if (Array.isArray(attributes.tags)) {
-    result.tags = attributes.tags;
-  }
-  if (Array.isArray(attributes.depends)) {
-    result.depends = attributes.depends;
-  }
-
-  return Object.keys(result).length > 0 ? result : {};
+  return Object.keys(normalized).length > 0 ? normalized : {};
 }

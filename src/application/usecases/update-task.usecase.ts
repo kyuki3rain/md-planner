@@ -7,7 +7,7 @@ import type { UpdateTaskOutput } from "@application/dto/update-task.output";
 import type { PatchServiceError, PatchServicePort } from "@application/ports/patch-service";
 import type { Task } from "@domain/entities/task";
 import type { TaskAttributesInput } from "@domain/entities/task-attributes";
-import { TaskFactory } from "@domain/services/task-factory";
+import type { TaskFactory } from "@domain/services/task-factory";
 import type { TaskIndexWriter } from "@domain/repositories/task-index-writer";
 import type { TaskRepository } from "@domain/repositories/task-repository";
 
@@ -90,8 +90,8 @@ function resolveAttributes(
     ...(existingTask.attributes.project ? { project: existingTask.attributes.project } : {}),
     ...(existingTask.attributes.assignee ? { assignee: existingTask.attributes.assignee } : {}),
     ...(existingTask.attributes.due ? { due: existingTask.attributes.due } : {}),
-    ...(existingTask.attributes.tags ? { tags: existingTask.attributes.tags } : {}),
-    ...(existingTask.attributes.depends ? { depends: existingTask.attributes.depends } : {}),
+    ...(existingTask.attributes.tags ? { tags: [...existingTask.attributes.tags] } : {}),
+    ...(existingTask.attributes.depends ? { depends: [...existingTask.attributes.depends] } : {}),
   };
 
   if (updates === undefined) {
@@ -102,23 +102,13 @@ function resolveAttributes(
     return {};
   }
 
-  const incoming: TaskAttributesInput = {};
-
-  if (typeof updates.project === "string") {
-    incoming.project = updates.project;
-  }
-  if (typeof updates.assignee === "string") {
-    incoming.assignee = updates.assignee;
-  }
-  if (typeof updates.due === "string") {
-    incoming.due = updates.due;
-  }
-  if (Array.isArray(updates.tags)) {
-    incoming.tags = updates.tags;
-  }
-  if (Array.isArray(updates.depends)) {
-    incoming.depends = updates.depends;
-  }
+  const incoming: TaskAttributesInput = {
+    ...(typeof updates.project === "string" ? { project: updates.project } : {}),
+    ...(typeof updates.assignee === "string" ? { assignee: updates.assignee } : {}),
+    ...(typeof updates.due === "string" ? { due: updates.due } : {}),
+    ...(Array.isArray(updates.tags) ? { tags: [...updates.tags] } : {}),
+    ...(Array.isArray(updates.depends) ? { depends: [...updates.depends] } : {}),
+  };
 
   return {
     ...current,

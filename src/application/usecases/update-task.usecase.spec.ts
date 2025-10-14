@@ -21,7 +21,10 @@ describe("UpdateTaskUseCase", () => {
       id: "T-ABC123" as TaskId,
       title: "Existing task",
       status: "todo",
-      attributes: {},
+      attributes: {
+        tags: undefined,
+        depends: undefined,
+      },
       source: {
         filePath: "/path/to/file.md",
         line: 10,

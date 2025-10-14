@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
+import type { CreateTaskInput } from "@application/dto/create-task.input";
+import type { UpdateTaskInput } from "@application/dto/update-task.input";
 import type { TaskAttributesInput } from "@domain/entities/task-attributes";
+import { type DueDate, ensureDueDate } from "@domain/value-objects/due-date";
 import type { ExtensionContainer } from "@infrastructure/di/extension-container";
 import { BaseWebviewProvider } from "./base-webview-provider";
 
@@ -278,11 +281,12 @@ export class BoardViewPanel extends BaseWebviewProvider {
 
       const attributesFromPayload = this.normalizeAttributesInput(data.attributes);
       const attributes = this.mergeAttributes(attributesFromPayload, attributesFromFields);
+      const dtoAttributes = this.toCreateAttributes(attributes);
 
       const result = await this.container.createTaskUseCase.execute({
         title: data.title,
         filePath: data.filePath,
-        ...(attributes ? { attributes } : {}),
+        ...(dtoAttributes ? { attributes: dtoAttributes } : {}),
       });
 
       if (result.isOk()) {
@@ -328,12 +332,7 @@ export class BoardViewPanel extends BaseWebviewProvider {
     }
 
     try {
-      const updateInput: {
-        id: import("@domain/value-objects/task-id").TaskId;
-        title?: string;
-        status?: "todo" | "doing" | "blocked" | "done" | "archived";
-        attributes?: TaskAttributesInput;
-      } = {
+      const updateInput: UpdateTaskInput = {
         id: data.id as import("@domain/value-objects/task-id").TaskId,
       };
 
@@ -353,9 +352,10 @@ export class BoardViewPanel extends BaseWebviewProvider {
       });
       const attributeUpdatesFromPayload = this.normalizeAttributesInput(data.updates.attributes);
       const mergedAttributes = this.mergeAttributes(attributeUpdatesFromPayload, attributeUpdatesFromFields);
+      const dtoUpdateAttributes = this.toUpdateAttributes(mergedAttributes);
 
-      if (mergedAttributes) {
-        updateInput.attributes = mergedAttributes;
+      if (dtoUpdateAttributes !== undefined) {
+        updateInput.attributes = dtoUpdateAttributes;
       }
 
       const result = await this.container.updateTaskUseCase.execute(updateInput);
@@ -445,14 +445,20 @@ export class BoardViewPanel extends BaseWebviewProvider {
     project?: unknown;
     depends?: unknown;
   }): TaskAttributesInput | undefined {
-    const attributes: TaskAttributesInput = {};
-    let hasAttribute = false;
+    type MutableTaskAttributesInput = {
+      project?: string | null;
+      assignee?: string | null;
+      tags?: string[] | null;
+      due?: string | null;
+      depends?: string[] | null;
+    };
+
+    const attributes: MutableTaskAttributesInput = {};
 
     if (typeof input.assignee === "string") {
       const trimmed = input.assignee.trim();
       if (trimmed.length > 0) {
         attributes.assignee = trimmed;
-        hasAttribute = true;
       }
     }
 
@@ -460,7 +466,6 @@ export class BoardViewPanel extends BaseWebviewProvider {
       const trimmed = input.dueDate.trim();
       if (trimmed.length > 0) {
         attributes.due = trimmed;
-        hasAttribute = true;
       }
     }
 
@@ -471,7 +476,6 @@ export class BoardViewPanel extends BaseWebviewProvider {
         .filter((tag) => tag.length > 0);
       if (normalized.length > 0) {
         attributes.tags = normalized;
-        hasAttribute = true;
       }
     }
 
@@ -479,7 +483,6 @@ export class BoardViewPanel extends BaseWebviewProvider {
       const trimmed = input.project.trim();
       if (trimmed.length > 0) {
         attributes.project = trimmed;
-        hasAttribute = true;
       }
     }
 
@@ -490,11 +493,12 @@ export class BoardViewPanel extends BaseWebviewProvider {
         .filter((dep) => dep.length > 0);
       if (normalized.length > 0) {
         attributes.depends = normalized;
-        hasAttribute = true;
       }
     }
 
-    return hasAttribute ? attributes : undefined;
+    return Object.keys(attributes).length > 0
+      ? (attributes as TaskAttributesInput)
+      : undefined;
   }
 
   private mergeAttributes(
@@ -508,8 +512,72 @@ export class BoardViewPanel extends BaseWebviewProvider {
     const merged = {
       ...(base ?? {}),
       ...(extra ?? {}),
-    } satisfies TaskAttributesInput;
+    } as TaskAttributesInput;
 
     return Object.keys(merged).length > 0 ? merged : undefined;
+  }
+
+  private toCreateAttributes(
+    attributes: TaskAttributesInput | undefined,
+  ): CreateTaskInput["attributes"] | undefined {
+    if (!attributes) {
+      return undefined;
+    }
+
+    type NonNullCreateAttrs = NonNullable<CreateTaskInput["attributes"]>;
+
+    // Validate due date if present
+    if (attributes.due) {
+      const dueResult = ensureDueDate(attributes.due as string);
+      if (dueResult.isErr()) {
+        this.sendMessage("task:error", { message: "Invalid due date", detail: dueResult.error });
+        return undefined;
+      }
+    }
+
+    const mapped: NonNullCreateAttrs = {
+      tags: attributes.tags ? [...attributes.tags] : undefined,
+      depends: attributes.depends
+        ? attributes.depends.map((dep) => dep as import("@domain/value-objects/task-id").TaskId)
+        : undefined,
+      project: attributes.project ?? undefined,
+      assignee: attributes.assignee ?? undefined,
+      due: attributes.due ? (attributes.due as DueDate) : undefined,
+    };
+
+    return Object.keys(mapped).length > 0 ? mapped : undefined;
+  }
+
+  private toUpdateAttributes(
+    attributes: TaskAttributesInput | undefined,
+  ): UpdateTaskInput["attributes"] | undefined {
+    if (attributes === undefined) {
+      return undefined;
+    }
+    if (attributes === null) {
+      return null;
+    }
+
+    type NonNullUpdateAttrs = Exclude<UpdateTaskInput["attributes"], undefined | null>;
+
+    if (attributes.due) {
+      const dueResult = ensureDueDate(attributes.due as unknown as string);
+      if (dueResult.isErr()) {
+        this.sendMessage("task:error", { message: "Invalid due date", detail: dueResult.error });
+        return undefined;
+      }
+    }
+
+    const mapped: NonNullUpdateAttrs = {
+      tags: attributes.tags ? [...attributes.tags] : undefined,
+      depends: attributes.depends
+        ? attributes.depends.map((dep) => dep as import("@domain/value-objects/task-id").TaskId)
+        : undefined,
+      project: attributes.project ?? undefined,
+      assignee: attributes.assignee ?? undefined,
+      due: attributes.due ? (attributes.due as unknown as import("@domain/value-objects/due-date").DueDate) : undefined,
+    };
+
+    return Object.keys(mapped).length > 0 ? mapped : undefined;
   }
 }

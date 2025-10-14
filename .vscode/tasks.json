@@ -5,7 +5,7 @@
   "tasks": [
     {
       "label": "watch",
-      "dependsOn": ["npm: watch:tsc", "npm: watch:esbuild"],
+      "dependsOn": ["pnpm: watch:tsc", "pnpm: watch:esbuild"],
       "presentation": {
         "reveal": "never"
       },
@@ -16,8 +16,13 @@
       "problemMatcher": []
     },
     {
-      "type": "npm",
-      "script": "watch:esbuild",
+      "label": "pnpm: watch:esbuild",
+      "type": "shell",
+      "command": "mise",
+      "args": ["exec", "--", "pnpm", "run", "watch:esbuild"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": {
         "owner": "esbuild",
@@ -37,19 +42,22 @@
         }
       },
       "isBackground": true,
-      "label": "npm: watch:esbuild",
       "presentation": {
         "group": "watch",
         "reveal": "never"
       }
     },
     {
-      "type": "npm",
-      "script": "watch:tsc",
+      "label": "pnpm: watch:tsc",
+      "type": "shell",
+      "command": "mise",
+      "args": ["exec", "--", "pnpm", "run", "watch:tsc"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
-      "label": "npm: watch:tsc",
       "presentation": {
         "group": "watch",
         "reveal": "never"
